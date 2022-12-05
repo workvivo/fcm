@@ -47,7 +47,7 @@ class FcmChannel
      * @throws \NotificationChannels\Fcm\Exceptions\CouldNotSendNotification
      * @throws \Kreait\Firebase\Exception\FirebaseException
      */
-    public function send($notifiable, Notification $notification)
+    public function send($notifiable, Notification $notification, $useLegacy = false)
     {
         $token = $notifiable->routeNotificationFor('fcm', $notification);
 
@@ -67,6 +67,10 @@ class FcmChannel
             $this->fcmProject = $notification->fcmProject($notifiable, $fcmMessage);
         }
 
+        if ($useLegacy) {
+            $this->fcmProject = 'legacy_app';
+        }
+
         $responses = [];
 
         try {
@@ -80,6 +84,9 @@ class FcmChannel
                 $responses[] = $this->sendToFcm($fcmMessage, $token);
             }
         } catch (MessagingException $exception) {
+            if (! $useLegacy) {
+                return $this->send($notifiable, $notification, true);
+            }
             $this->failedNotification($notifiable, $notification, $exception, $token);
             throw CouldNotSendNotification::serviceRespondedWithAnError($exception);
         }
